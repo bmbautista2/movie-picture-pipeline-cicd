@@ -1,5 +1,5 @@
-cat > .github/workflows/frontend-ci.yaml <<'EOF'
 name: Frontend Continuous Integration
+
 
 on:
   pull_request:
