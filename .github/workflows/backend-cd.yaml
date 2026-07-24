@@ -134,7 +134,7 @@ jobs:
       - name: Deploy backend manifests
         working-directory: starter/backend/k8s
         run: |
-          kustomize edit set image backend=${{ needs.build.outputs.image }}
+          kustomize edit set image backend=${{ secrets.AWS_BACKEND_ECR_REPO }}:${{ github.sha }}
           kustomize build | kubectl apply -f -
 
       - name: Verify backend rollout
