@@ -6,125 +6,136 @@ on:
       - main
     paths:
       - "starter/frontend/**"
-      - ".github/workf**ws/frontend-cd.yaml"
-  workflow_d**patch:
+      - ".github/workflows/frontend-cd.yaml"
+  workflow_dispatch:
 
 jobs:
   lint:
-    name: L**t Frontend
-    runs-on: ubuntu-la**st
+    name: Lint Frontend
+    runs-on: ubuntu-latest
 
     defaults:
       run:
-    **  working-directory: starter/fron**nd
+        working-directory: starter/frontend
 
-   **teps**      - name: Checkout code
-     ** uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-     ** name: Setup NodeJS
-        uses:**ctions/setup-node@v4
-        with**          node-version: "16"
-    **    cache: "npm"
-          cache-**pendency-path: starter/frontend/p**kage-lock.json
+      - name: Setup NodeJS
+        uses: actions/setup-node@v4
+        with:
+          node-version: "16"
+          cache: "npm"
+          cache-dependency-path: starter/frontend/package-lock.json
 
-      - name: Ins**ll dependencies
-        run: npm **
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Run frontend lint**       run: npm run lint
+      - name: Run frontend lint
+        run: npm run lint
 
-  test:**   name: Test Frontend
-    runs-o** ubuntu-latest
+  test:
+    name: Test Frontend
+    runs-on: ubuntu-latest
 
     defaults:
-   ** run:
-       **orking-directory: starter/fronten**
+      run:
+        working-directory: starter/frontend
+
     steps:
-     ** name: Checkout code
-        uses**actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-**   ** name: Setup NodeJS
-        uses:**ctions/setup-node@v4
-        with****       **ode-version: "16"
-          cache**"npm"
-         **ache-dependency-path: starter/fro**end/package-lock.json
+      - name: Setup NodeJS
+        uses: actions/setup-node@v4
+        with:
+          node-version: "16"
+          cache: "npm"
+          cache-dependency-path: starter/frontend/package-lock.json
 
-      - na**: Install dependencies
-        ru** npm ci
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Run fronte** tests
-        run: CI=true npm t**t
+      - name: Run frontend tests
+        run: CI=true npm test
 
   build:
-   **ame: Build and Push Frontend Imag**    runs-on: ubuntu-latest
-   **eeds:
+    name: Build and Push Frontend Image
+    runs-on: ubuntu-latest
+    needs:
       - lint
-**   ** test
+      - test
 
-   **utputs:
-      image: ${{ steps.im**e.outputs.image }}
+    outputs:
+      image: ${{ steps.image.outputs.image }}
 
-**  defaults:
-     **un**        working-directory: starte**frontend
+    defaults:
+      run:
+        working-directory: starter/frontend
 
     steps:
-     ** name: Checkout code
-        uses**actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name**Configure AWS credentials
-       **ses**aws-actions/configure-aws-credent**ls@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws**ccess-key-id: ${{ secrets.AWS_ACC**S_KEY_ID }}
-          aws-secret-**cess-key: ${{ secrets.AWS_SECRET_**CESS_KEY }}
-          aws-session**oken: ${{ secrets.AWS_SESSION_TOK** }}
-          aws-region: ${{ sec**ts.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: L**in to Amazon ECR
-        uses: aw**actions/amazon-ecr-login@v2
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
 
-    **- name: Build frontend Docker ima**
+      - name: Build frontend Docker image
         run: |
-          docker **ild \
-           **-build-arg=REACT_APP_MOVIE_API_UR**${{ secrets.REACT_APP_MOVIE_API_U** }} \
-            --tag ${{ secre**.AWS_FRONTEND_ECR_REPO }}:${{ git**b.sha }} .
+          docker build \
+            --build-arg=REACT_APP_MOVIE_API_URL=${{ secrets.REACT_APP_MOVIE_API_URL }} \
+            --tag ${{ secrets.AWS_FRONTEND_ECR_REPO }}:${{ github.sha }} .
 
-      - name: Push fr**tend Docker image
-        run: do**er push ${{ secrets.AWS_FRONTEND_**R_REPO }}:${{ github.sha }}
+      - name: Push frontend Docker image
+        run: docker push ${{ secrets.AWS_FRONTEND_ECR_REPO }}:${{ github.sha }}
 
-    **- name: Save frontend image outpu**        id: image
-        run: ec** "image=${{ secrets.AWS_FRONTEND_**R_REPO }}:${{ github.sha }}" >> "**ITHUB_OUTPUT"
+      - name: Save frontend image output
+        id: image
+        run: echo "image=${{ secrets.AWS_FRONTEND_ECR_REPO }}:${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
   deploy:
-    name**Deploy Frontend to EKS
-    runs-o** ubuntu-latest
+    name: Deploy Frontend to EKS
+    runs-on: ubuntu-latest
     needs:
-      -**uild
+      - build
 
-**  steps:
-     ** name: Checkout code
-**      uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-**   ** name: Configure AWS credentials
-**     **ses: aws-actions/configure-aws-cr**entials@v4
-**     **ith**          aws-access-key-id: ${{ **crets.AWS_ACCESS_KEY_ID }}
-      **  aws-secret-access-key: ${{ secr**s.AWS_SECRET_ACCESS_KEY }}
-      **  aws-session-token: ${{ secrets.**S_SESSION_TOKEN }}
-          aws-**gion: ${{ secrets.AWS_REGION }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-**    - name: Update kubeconfig
-   **   run: |
-          aws eks updat**kubeconfig \
-            --region**{{ secrets.AWS_REGION }} \
-      **    --name ${{ secrets.AWS_CLUSTE**NAME }}
-
-      - name: Install ku**omize
-       **un**|
-          curl -s https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash
-          sudo mv **stomize /usr/local/bin/kustomize
-**     - name: Deploy frontend mani**sts
-        working-directory: st**ter/frontend/k8s
+      - name: Update kubeconfig
         run: |
- **       kustomize edit set image f**ntend=${{ needs.build.outputs.ima** }}
-          kustomize build | k**ectl apply -f -
+          aws eks update-kubeconfig \
+            --region ${{ secrets.AWS_REGION }} \
+            --name ${{ secrets.AWS_CLUSTER_NAME }}
 
-      - name: Ve**fy frontend rollout
-        run: **bectl rollout status deployment/f**ntend
+      - name: Install kustomize
+        run: |
+          curl -s https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash
+          sudo mv kustomize /usr/local/bin/kustomize
+
+      - name: Deploy frontend manifests
+        working-directory: starter/frontend/k8s
+        run: |
+          kustomize edit set image frontend=${{ needs.build.outputs.image }}
+          kustomize build | kubectl apply -f -
+
+      - name: Verify frontend rollout
+        run: kubectl rollout status deployment/frontend
