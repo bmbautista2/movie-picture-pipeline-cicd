@@ -128,10 +128,13 @@ jobs:
 
       - name: Install kustomize
         run: |
-          curl -Lo kustomize.tar.gz https://github.com/kubernetes-sigs/kustomize/releases/latest/download/kustomize_linux_amd64.tar.gz
-          tar -xzf kustomize.tar.gz
+          sudo apt-get update
+          sudo apt-get install -y curl
+          curl -sSL -o kustomize \
+            https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v5.4.3/kustomize_v5.4.3_linux_amd64
           chmod +x kustomize
           sudo mv kustomize /usr/local/bin/kustomize
+          kustomize version
 
       - name: Deploy frontend manifests
         working-directory: starter/frontend/k8s
