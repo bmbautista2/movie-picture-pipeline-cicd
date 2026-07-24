@@ -1,3 +1,4 @@
+cat > .github/workflows/frontend-ci.yaml <<'EOF'
 name: Frontend Continuous Integration
 
 on:
@@ -75,9 +76,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup NodeJS
+        uses: actions/setup-node@v4
+        with:
+          node-version: "16"
+          cache: "npm"
+          cache-dependency-path: starter/frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run frontend tests
+        run: CI=true npm test
+
       - name: Build frontend Docker image
         run: |
           docker build \
             --build-arg=REACT_APP_MOVIE_API_URL=${{ secrets.REACT_APP_MOVIE_API_URL }} \
             --tag mp-frontend:${{ github.sha }} .
-
+EOF
