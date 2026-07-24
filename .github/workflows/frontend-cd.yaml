@@ -134,8 +134,8 @@ jobs:
       - name: Deploy frontend manifests
         working-directory: starter/frontend/k8s
         run: |
-          kustomize edit set image frontend=${{ secrets.AWS_FRONTEND_ECR_REPO }}:${{ github.sha }}
-          kustomize build | kubectl apply -f -
+          sed -i "s|image: frontend|image: ${{ secrets.AWS_FRONTEND_ECR_REPO }}:${{ github.sha }}|g" deployment.yaml
+          kubectl apply -k .
 
       - name: Verify frontend rollout
         run: kubectl rollout status deployment/frontend
