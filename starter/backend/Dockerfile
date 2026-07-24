@@ -10,8 +10,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     build-essential \
     gcc \
-    libpcre3 \
-    libpcre3-dev \
+    libpcre2-dev \
     libssl-dev \
     libffi-dev \
     openssl \
